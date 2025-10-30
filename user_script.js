@@ -1,4 +1,4 @@
-//alert('Hello World!');
+alert('Hello World!');
 
 // Function to detect faces in a single image
 async function detectFacesInImage(img) {

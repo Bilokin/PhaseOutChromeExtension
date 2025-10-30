@@ -77,7 +77,7 @@ async function onSave() {
       {
         id: USER_SCRIPT_ID,
         matches: ['https://example.com/*'],
-        js: type === 'file' ? [{ file: 'user-script.js' }] : [{ code: script }]
+        js: type === 'file' ? [{ file: 'user_script.js' }] : [{ code: script }]
       }
     ]);
   } else {
@@ -86,7 +86,7 @@ async function onSave() {
       {
         id: USER_SCRIPT_ID,
         matches: ['https://example.com/*'],
-        js: type === 'file' ? [{ file: 'user-script.js' }] : [{ code: script }]
+        js: type === 'file' ? [{ file: 'user_script.js' }] : [{ code: script }]
       }
     ]);
   }

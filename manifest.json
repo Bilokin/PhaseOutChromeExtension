@@ -1,0 +1,17 @@
+{
+  "name": "PhaseOut",
+  "version": "0.1",
+  "manifest_version": 5,
+  "minimum_chrome_version": "120",
+  "description": "Uses in-browser face recognition to remove a certain face from the internet.",
+  "background": {
+    "service_worker": "sw.js"
+  },
+  "permissions": ["storage", "userScripts"],
+  "host_permissions": ["https://example.com/*", "file:///*", "localhost/*", "127.0.0.1/*"],
+  "action": {},
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  }
+}

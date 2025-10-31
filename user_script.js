@@ -20,10 +20,10 @@ async function detectFacesInImage(img) {
 
 // Example images: [{ label: 'Person1', imageUrl: 'person1.jpg' }, ...]
 const exampleImages = [
-    { label: 'Penny', imageUrl: 'person1.jpg' },
-    { label: 'Penny', imageUrl: 'person1a.jpg' },
-    { label: 'Penny', imageUrl: 'person1b.jpg' },
-    { label: 'Sheldon', imageUrl: 'person2.jpg' },
+    { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
+    { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
+    { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
+    { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
     // Add more examples as needed
 ];
 
@@ -274,9 +274,11 @@ function setupMutationObserver(cfg) {
 
 // Load models, examples, and start observing
 async function init() {
-    await faceapi.nets.tinyFaceDetector.loadFromUri('./weights');
-    await faceapi.nets.faceLandmark68Net.loadFromUri('./weights');
-    await faceapi.nets.faceRecognitionNet.loadFromUri('./weights');
+    weightsPath = WEIGHTS_URL || './weights';
+    console.log("Using weights path:", weightsPath);
+    await faceapi.nets.tinyFaceDetector.loadFromUri(weightsPath);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(weightsPath);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(weightsPath);
     console.log("Models loaded!");
 
     await loadExampleImages(exampleImages);

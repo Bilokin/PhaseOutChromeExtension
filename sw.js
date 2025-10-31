@@ -16,8 +16,40 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason == chrome.runtime.OnInstalledReason.INSTALL) {
     chrome.runtime.openOptionsPage();
   }
+  
 });
 
-chrome.action.onClicked.addListener(() => {
-  chrome.runtime.openOptionsPage();
+chrome.action.onClicked.addListener(async (tab) => {
+  // Get the URL for the weights folder
+
+  // Generate a URL for a web-accessible resource
+  const imagesResourceUrl = chrome.runtime.getURL("images/");
+  const weightsResourceUrl = chrome.runtime.getURL("weights/");
+
+
+
+  await chrome.userScripts.register([
+    {
+      id: 'constants',
+      matches: ['<all_urls>'],
+      js: [{ code: `const IMAGES_URL = "${imagesResourceUrl}";
+                    const WEIGHTS_URL = "${weightsResourceUrl}";` }]
+    },
+    {
+      id: 'face-api',
+      matches: ['<all_urls>'],
+      js: [{ file: 'face-api.min.js' }]
+    },
+    {
+      id: 'weights-script',
+      matches: ['<all_urls>'],
+      js: [{ file: 'weights_base64.js' }]
+    },
+    {
+      id: 'user-script',
+      matches: ['<all_urls>'],
+      js: [{ file: 'user_script.js' }]
+    }
+  ]);
+
 });

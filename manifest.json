@@ -1,19 +1,25 @@
 {
   "name": "PhaseOut",
   "version": "0.1",
-  "manifest_version": 3,
+  "manifest_version": 4,
   "minimum_chrome_version": "120",
   "description": "Uses in-browser face recognition to remove selected faces from websites.",
   "background": {
     "service_worker": "sw.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["weights/*", "images/*", "face-api.min.js", "user_script.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "permissions": [
     "storage",
     "activeTab",
     "scripting",
     "userScripts"
   ],
-  "host_permissions": ["https://example.com/*", "file:///*", "http://localhost/*", "http://127.0.0.1/*"],
+  "host_permissions": [ "<all_urls>", "https://example.com/*", "file:///*", "http://localhost*/*", "http://127.0.0.1*/*"],
   "action": {},
   "options_ui": {
     "page": "options.html",

@@ -1,4 +1,3 @@
-alert('Hello World!');
 
 // Function to detect faces in a single image
 async function detectFacesInImage(img) {
@@ -86,6 +85,8 @@ async function resizeImage(img, maxWidth = 640, maxHeight = 480) {
 
     // Return a new image with the resized data
     const resizedImg = new Image();
+    resizedImg.crossOrigin = "anonymous"; // Enable CORS
+
     resizedImg.src = canvas.toDataURL('image/jpeg');
     await new Promise((resolve) => {
         resizedImg.onload = resolve;

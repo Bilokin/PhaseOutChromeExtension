@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 250px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      text-align: center;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+      margin: 10px 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #2196F3;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    .status-text {
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .active {
+      color: green;
+    }
+    .inactive {
+      color: red;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      margin: 5px 0;
+    }
+    button:hover {
+      background-color: #1976D2;
+    }
+    .title {
+      font-size: 18px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">PhaseOut</div>
+    <div class="status-text" id="statusText">Checking status...</div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="toggleSwitch">
+      <span class="slider"></span>
+    </label>
+    <div>Extension Status</div>
+    <button id="refreshBtn">Refresh Tab</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -23,28 +23,43 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateUI(isExtensionEnabled);
     
     // Set up toggle switch event listener
-    toggleSwitch.addEventListener('change', async function() {
-      // Send message to service worker to toggle extension
-      const response = await chrome.runtime.sendMessage({
-        action: 'toggleExtension'
-      });
+    toggleSwitch.addEventListener('change', async function(event) {
+      // Prevent immediate toggling if already processing
+      if (toggleSwitch.disabled) return;
       
-      if (response && response.status === 'success') {
-        // Update the storage state and UI
-        const newStatus = !isExtensionEnabled;
-        updateUI(newStatus);
+      // Disable the switch during processing to prevent multiple clicks
+      toggleSwitch.disabled = true;
+      
+      try {
+        // Send message to service worker to toggle extension
+        const response = await chrome.runtime.sendMessage({
+          action: 'toggleExtension'
+        });
         
-        if (newStatus) {
-          statusText.textContent = 'Extension is active for this tab';
-          statusText.className = 'status-text active';
-        } else {
-          statusText.textContent = 'Extension is inactive for this tab';
-          statusText.className = 'status-text inactive';
+        if (response && response.status === 'success') {
+          // Update the storage state and UI
+          const newStatus = event.target.checked;
+          updateUI(newStatus);
+          
+          if (newStatus) {
+            statusText.textContent = 'Extension is active for this tab';
+            statusText.className = 'status-text active';
+          } else {
+            statusText.textContent = 'Extension is inactive for this tab';
+            statusText.className = 'status-text inactive';
+          }
+        } else if (response && response.status === 'error') {
+          console.error('Error toggling extension:', response.message);
+          // Revert UI to previous state
+          updateUI(isExtensionEnabled);
         }
-      } else if (response && response.status === 'error') {
-        console.error('Error toggling extension:', response.message);
+      } catch (error) {
+        console.error('Error in toggle switch:', error);
         // Revert UI to previous state
         updateUI(isExtensionEnabled);
+      } finally {
+        // Re-enable the switch after processing
+        toggleSwitch.disabled = false;
       }
     });
     
@@ -101,7 +116,10 @@ function updateUI(isActive) {
   
   // Handle case where element might not be loaded yet
   if (toggleSwitch) {
-    toggleSwitch.checked = isActive;
+    // Use a timeout to ensure the DOM is fully updated
+    setTimeout(() => {
+      toggleSwitch.checked = isActive;
+    }, 0);
   }
   
   if (statusText) {

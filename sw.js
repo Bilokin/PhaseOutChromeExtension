@@ -152,7 +152,78 @@ async function toggleExtension(tabId) {
     // Update storage
     await chrome.storage.local.set({ extensionEnabled: newEnabledState, activeTabId: tabId });
     
-    // Enable or disable based on new state
+// ... existing code ...
+
+// Enable extension for a specific tab
+async function enableExtensionForTab(tabId) {
+  try {
+    // Get the URL for the weights folder
+    const imagesResourceUrl = chrome.runtime.getURL("images/");
+    const weightsResourceUrl = chrome.runtime.getURL("weights/");
+
+    console.log('enableExtensionForTab');
+
+    // First, get sample images from storage to inject into user script
+    const result = await new Promise((resolve) => {
+      chrome.storage.local.get(['sampleImages'], resolve);
+    });
+
+    const sampleImages = result.sampleImages || [];
+
+    // Create a code string that will be injected to make sample images available in user script context
+    let sampleImagesCode = '';
+    if (sampleImages.length > 0) {
+      // Make sure each image has proper structure with label and imageUrl
+      const processedImages = sampleImages.map(img => ({
+        label: img.name || 'Unknown',
+        imageUrl: img.imageUrl || ''
+      })).filter(img => img.label && img.imageUrl);
+
+      sampleImagesCode = `
+        window.sampleImages = ${JSON.stringify(processedImages)};
+      `;
+    } else {
+      // If no stored images, provide default images
+      sampleImagesCode = `
+        window.sampleImages = [
+          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1.jpg' },
+          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1a.jpg' },
+          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1b.jpg' },
+          { label: 'Sheldon', imageUrl: '${imagesResourceUrl}person2.jpg' }
+        ];
+      `;
+    }
+
+    // Register content scripts for this specific tab only using userScripts API
+    await chrome.userScripts.register([
+      {
+        id: `phaseout-${tabId}-constants`,
+        matches: ["<all_urls>"],
+        js: [{ code: `const IMAGES_URL = "${imagesResourceUrl}"; const WEIGHTS_URL = "${weightsResourceUrl}";` }]
+      },
+      {
+        id: `phaseout-${tabId}-face-api`,
+        matches: ["<all_urls>"],
+        js: [{ file: 'face-api.min.js' }]
+      },
+      {
+        id: `phaseout-${tabId}-user-script`,
+        matches: ["<all_urls>"],
+        js: [
+          { file: 'user_script.js' },
+          { code: sampleImagesCode }
+        ]
+      }
+    ]);
+
+    console.log('Extension enabled for tab:', tabId);
+  } catch (error) {
+    console.error('Error enabling extension:', error);
+    throw error;
+  }
+}
+
+// ... existing code ...
     if (newEnabledState) {
       await enableExtensionForTab(tabId);
     } else {

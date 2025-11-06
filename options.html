@@ -1,27 +1,118 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>PhaseOut Settings</title>
+  <meta charset="UTF-8">
+  <title>PhaseOff Options</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
       padding: 20px;
-      max-width: 600px;
+      background-color: #f5f5f5;
     }
-    #warning {
-      color: red;
+    
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    
+    .image-list {
+      margin: 20px 0;
+    }
+    
+    .image-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background-color: white;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .image-preview {
+      width: 60px;
+      height: 60px;
+      margin-right: 15px;
+      border-radius: 5px;
+      object-fit: cover;
+    }
+    
+    .image-info {
+      flex: 1;
+    }
+    
+    .person-name {
+      width: 150px;
+      padding: 5px;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+    }
+    
+    .delete-btn {
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    
+    .delete-btn:hover {
+      background-color: #cc0000;
+    }
+    
+    .upload-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    
+    .upload-btn:hover {
+      background-color: #45a049;
+    }
+    
+    .file-input {
       display: none;
+    }
+    
+    .empty-state {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+    
+    .name-validation-error {
+      color: red;
+      font-size: 12px;
+      margin-top: 5px;
     }
   </style>
 </head>
 <body>
-  <div id="warning">
-    <p>Developer mode is required for this extension. Please enable it in Chrome's extensions settings.</p>
+  <h1>PhaseOff Options</h1>
+  
+  <div class="image-list" id="imageList">
+    <!-- Image items will be added here dynamically -->
+    <div class="empty-state" id="emptyState">
+      No sample images found. Add your first image using the button below.
+    </div>
   </div>
-  <div>
-    <h1>PhaseOut</h1>
-    <p>The extension is now active and will remove recognized faces from all websites.</p>
-  </div>
+  
+  <button class="upload-btn" id="addImageBtn">+ Add Sample Image</button>
+  <input type="file" id="fileInput" class="file-input" accept=".jpg,.jpeg,.png">
+  
   <script src="options.js"></script>
 </body>
 </html>

@@ -49,11 +49,6 @@ chrome.action.onClicked.addListener(async (tab) => {
       js: [{ file: 'face-api.min.js' }]
     },
     {
-      id: 'weights-script',
-      matches: ['<all_urls>'],
-      js: [{ file: 'weights_base64.js' }]
-    },
-    {
       id: 'user-script',
       matches: ['<all_urls>'],
       js: [{ file: 'user_script.js' }]
@@ -133,6 +128,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({status: 'error', message: error.message}));
     return true; // Keep message channel open for async response
   }
+  
+  if (request.action === 'getSampleImages') {
+    // Get sample images from storage
+    chrome.storage.local.get(['sampleImages'], (result) => {
+      sendResponse({sampleImages: result.sampleImages || []});
+    });
+    return true; // Keep message channel open for async response
+  }
 });
 
 // Toggle extension state for a specific tab
@@ -169,7 +172,39 @@ async function enableExtensionForTab(tabId) {
     // Get the URL for the weights folder
     const imagesResourceUrl = chrome.runtime.getURL("images/");
     const weightsResourceUrl = chrome.runtime.getURL("weights/");
+    
     console.log('enableExtensionForTab');
+    
+    // First, get sample images from storage to inject into user script
+    const result = await new Promise((resolve) => {
+      chrome.storage.local.get(['sampleImages'], resolve);
+    });
+    
+    const sampleImages = result.sampleImages || [];
+    
+    // Create a code string that will be injected to make sample images available in user script context
+    let sampleImagesCode = '';
+    if (sampleImages.length > 0) {
+      // Make sure each image has proper structure with label and imageUrl
+      const processedImages = sampleImages.map(img => ({
+        label: img.label || 'Unknown',
+        imageUrl: img.imageUrl || ''
+      })).filter(img => img.label && img.imageUrl);
+      
+      sampleImagesCode = `
+        window.sampleImages = ${JSON.stringify(processedImages)};
+      `;
+    } else {
+      // If no stored images, provide default images
+      sampleImagesCode = `
+        window.sampleImages = [
+          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1.jpg' },
+          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1a.jpg' },
+          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1b.jpg' },
+          { label: 'Sheldon', imageUrl: '${imagesResourceUrl}person2.jpg' }
+        ];
+      `;
+    }
     
     // Register content scripts for this specific tab only using userScripts API
     await chrome.userScripts.register([
@@ -186,7 +221,10 @@ async function enableExtensionForTab(tabId) {
       {
         id: `phaseout-${tabId}-user-script`,
         matches: ["<all_urls>"],
-        js: [{ file: 'user_script.js' }]
+        js: [
+          { file: 'user_script.js' },
+          { code: sampleImagesCode }
+        ]
       }
     ]);
     

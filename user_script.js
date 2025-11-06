@@ -1,4 +1,3 @@
-
 // Function to detect faces in a single image
 async function detectFacesInImage(img) {
     if (!img.complete) {
@@ -17,37 +16,82 @@ async function detectFacesInImage(img) {
     console.log(`Detected ${detections.length} faces in image:`, img.src, detections);
 }
 
-// Example images: [{ label: 'Person1', imageUrl: 'person1.jpg' }, ...]
-const exampleImages = [
-    { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
-    { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
-    { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
-    { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
-    // Add more examples as needed
-];
+// This will be replaced with dynamically loaded sample images
+let exampleImages = [];
+
+// Load stored sample images from extension storage via messaging
+async function loadStoredSampleImages() {
+    try {
+        // Since chrome.runtime.sendMessage is not available in user script context,
+        // we'll use a different approach to get the sample images.
+        
+        // Check if there's a global variable set by the service worker or 
+        // fallback to hardcoded images
+        
+        // If sampleImages are already loaded into global scope, use them
+        if (typeof window.sampleImages !== 'undefined' && window.sampleImages.length > 0) {
+            exampleImages = window.sampleImages;
+            console.log("Loaded sample images from global scope:", exampleImages);
+        } else {
+            // Fallback to default images if needed
+            exampleImages = [
+                { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
+                { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
+                { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
+                { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
+            ];
+            console.log("Using fallback sample images");
+        }
+    } catch (error) {
+        console.error('Error loading stored sample images:', error);
+        // Fallback to default images if needed
+        exampleImages = [
+            { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
+            { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
+            { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
+            { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
+        ];
+    }
+}
 
 const labeledDescriptors = [];
 
 async function loadExampleImages(exampleImages) {
     for (const { label, imageUrl } of exampleImages) {
-        const img = await faceapi.fetchImage(imageUrl);
-        const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-            .withFaceLandmarks()
-            .withFaceDescriptor();
-        if (detections) {
-            // Check if this label already exists in labeledDescriptors
-            const existingEntryIndex = labeledDescriptors.findIndex(entry => entry.label === label);
-            if (existingEntryIndex >= 0) {
-                // Append the new descriptor to the existing entry
-                labeledDescriptors[existingEntryIndex].descriptors.push(detections.descriptor);
-            } else {
-                // Create a new LabeledFaceDescriptors object
-                const labeledFaceDescriptors = new faceapi.LabeledFaceDescriptors(label, [detections.descriptor]);
-                labeledDescriptors.push(labeledFaceDescriptors);
+        try {
+            // Validate that we have a valid label
+            if (!label || typeof label !== 'string') {
+                console.error('Invalid label found in sample image:', { label, imageUrl });
+                continue;
             }
-            console.log(`Encoded example for ${label}`);
-        } else {
-            console.error(`No face detected in example image for ${label}`);
+            
+            // Handle relative URLs properly
+            let fullImageUrl = imageUrl;
+            if (!imageUrl.startsWith('http') && !imageUrl.startsWith(IMAGES_URL)) {
+                fullImageUrl = IMAGES_URL + imageUrl;
+            }
+            
+            const img = await faceapi.fetchImage(fullImageUrl);
+            const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            if (detections) {
+                // Check if this label already exists in labeledDescriptors
+                const existingEntryIndex = labeledDescriptors.findIndex(entry => entry.label === label);
+                if (existingEntryIndex >= 0) {
+                    // Append the new descriptor to the existing entry
+                    labeledDescriptors[existingEntryIndex].descriptors.push(detections.descriptor);
+                } else {
+                    // Create a new LabeledFaceDescriptors object with proper validation
+                    const labeledFaceDescriptors = new faceapi.LabeledFaceDescriptors(label, [detections.descriptor]);
+                    labeledDescriptors.push(labeledFaceDescriptors);
+                }
+                console.log(`Encoded example for ${label}`);
+            } else {
+                console.error(`No face detected in example image for ${label}`);
+            }
+        } catch (error) {
+            console.error(`Error processing example image for ${label}:`, error);
         }
     }
 }
@@ -55,6 +99,12 @@ async function loadExampleImages(exampleImages) {
 
 // Initialize the face matcher after loading example images
 function initFaceMatcher() {
+    // Check that we have at least one labeled descriptor before initializing
+    if (labeledDescriptors.length === 0) {
+        console.warn("No labeled descriptors found, face matcher not initialized");
+        return;
+    }
+    
     faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
     console.log("Face matcher initialized with examples.");
 }
@@ -124,7 +174,8 @@ function loadCfg() {
     };
 }
 
-
+// Global variable for face matcher
+let faceMatcher;
 
 async function recognizeFacesInImage(img, cfg) {
     if (!img.complete) {
@@ -150,6 +201,12 @@ async function recognizeFacesInImage(img, cfg) {
         .withFaceDescriptors();
 
     if (detections.length > 0) {
+        // Check if we have a valid face matcher
+        if (!faceMatcher) {
+            console.warn("Face matcher not initialized yet");
+            return [];
+        }
+        
         // Recognize faces
         const results = detections.map(d => faceMatcher.findBestMatch(d.descriptor));
         const wrapper = wrapImageInContainer(img);
@@ -282,14 +339,34 @@ async function init() {
     await faceapi.nets.faceRecognitionNet.loadFromUri(weightsPath);
     console.log("Models loaded!");
 
-    await loadExampleImages(exampleImages);
-    cfg = loadCfg()
-    initFaceMatcher();
+    // Load stored sample images
+    await loadStoredSampleImages();
+    
+    // Check if we have any example images to load
+    if (exampleImages && exampleImages.length > 0) {
+        await loadExampleImages(exampleImages);
+        cfg = loadCfg()
+        initFaceMatcher();
 
-    await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
-    setupMutationObserver(cfg);       // Start observing for new images
+        await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
+        setupMutationObserver(cfg);       // Start observing for new images
+    } else {
+        console.log("No sample images found, using default images");
+        // Fallback to original hardcoded images if no stored images exist
+        exampleImages = [
+            { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
+            { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
+            { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
+            { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
+        ];
+        await loadExampleImages(exampleImages);
+        cfg = loadCfg()
+        initFaceMatcher();
+
+        await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
+        setupMutationObserver(cfg);       // Start observing for new images
+    }
 }
 
 // Start the process
 init().catch(console.error);
-

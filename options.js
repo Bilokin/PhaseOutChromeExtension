@@ -69,7 +69,20 @@ function createImageItem(image, index) {
   // Create preview image element
   const imgPreview = document.createElement('img');
   imgPreview.className = 'image-preview';
-  imgPreview.src = image.previewUrl || image.imageUrl;
+  
+  // Handle different image storage formats
+  if (image.previewUrl) {
+    // If we have a preview URL, use it directly
+    imgPreview.src = image.previewUrl;
+  } else if (image.data && image.data.length > 0) {
+    // If we have binary data, create a blob URL
+    const blob = new Blob([new Uint8Array(image.data)], { type: 'image/jpeg' });
+    imgPreview.src = URL.createObjectURL(blob);
+  } else {
+    // Fallback to a placeholder or default image
+    imgPreview.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"%3E%3Crect fill="%23eee" width="80" height="80"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3ENo Image%3C/text%3E%3C/svg%3E';
+  }
+  
   imgPreview.alt = image.name || `Image ${index + 1}`;
   
   // Create info container

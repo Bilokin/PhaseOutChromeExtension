@@ -4,7 +4,7 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
   }
   
   // Initialize with extension disabled for all tabs
-  chrome.storage.local.set({ extensionEnabled: false, activeTabId: null });
+  chrome.storage.local.set({ extensionEnabledForTabs: {} });
 });
 
 // Clean up when a tab is closed
@@ -17,6 +17,14 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
       `phaseout-${tabId}-user-script`
     ]});
     console.log('Cleaned up scripts for closed tab:', tabId);
+    
+    // Remove tab from storage
+    chrome.storage.local.get(['extensionEnabledForTabs'], (result) => {
+      if (result.extensionEnabledForTabs && result.extensionEnabledForTabs[tabId]) {
+        delete result.extensionEnabledForTabs[tabId];
+        chrome.storage.local.set({ extensionEnabledForTabs: result.extensionEnabledForTabs });
+      }
+    });
   } catch (error) {
     // Ignore errors for non-existent scripts
     if (error.message.includes('Nonexistent script ID')) {
@@ -61,7 +69,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'toggleExtension') {
-    // Get the tab ID from storage or sender.tab.id
+    // Get the tab ID from sender.tab.id (for popup messages)
     let tabId;
     
     // First try to get tab ID from sender.tab.id (for popup messages)
@@ -136,23 +144,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // Keep message channel open for async response
   }
+  
+  if (request.action === 'isExtensionEnabledForTab') {
+    const tabId = request.tabId;
+    if (!tabId) {
+      console.error('No valid tab ID found for isExtensionEnabledForTab');
+      sendResponse({status: 'error', message: 'No valid tab ID'});
+      return true;
+    }
+    
+    chrome.storage.local.get(['extensionEnabledForTabs'], (result) => {
+      const enabledForTabs = result.extensionEnabledForTabs || {};
+      sendResponse({enabled: enabledForTabs[tabId] === true});
+    });
+    return true; // Keep message channel open for async response
+  }
 });
 
 // Toggle extension state for a specific tab
 async function toggleExtension(tabId) {
   try {
-    // Get current state
-    const result = await chrome.storage.local.get(['extensionEnabled', 'activeTabId']);
-    // Default to false if not set
-    const isCurrentlyEnabled = (result.extensionEnabled !== undefined) ? result.extensionEnabled : false;
+    // Get current state for this specific tab
+    const result = await chrome.storage.local.get(['extensionEnabledForTabs']);
+    const enabledForTabs = result.extensionEnabledForTabs || {};
     
-    // Toggle the state
-    const newEnabledState = !isCurrentlyEnabled;
+    // Toggle the state for this specific tab only
+    const newEnabledState = !enabledForTabs[tabId];
     
-    // Update storage
-    await chrome.storage.local.set({ extensionEnabled: newEnabledState, activeTabId: tabId });
+    // Update storage with the new state for this tab
+    enabledForTabs[tabId] = newEnabledState;
+    await chrome.storage.local.set({ extensionEnabledForTabs: enabledForTabs });
     
-// ... existing code ...
+    if (newEnabledState) {
+      await enableExtensionForTab(tabId);
+    } else {
+      await disableExtensionForTab(tabId);
+    }
+    
+    console.log(`Extension toggled to ${newEnabledState} for tab:`, tabId);
+  } catch (error) {
+    console.error('Error toggling extension:', error);
+    throw error;
+  }
+}
 
 // Enable extension for a specific tab
 async function enableExtensionForTab(tabId) {
@@ -216,89 +250,6 @@ async function enableExtensionForTab(tabId) {
       }
     ]);
 
-    console.log('Extension enabled for tab:', tabId);
-  } catch (error) {
-    console.error('Error enabling extension:', error);
-    throw error;
-  }
-}
-
-// ... existing code ...
-    if (newEnabledState) {
-      await enableExtensionForTab(tabId);
-    } else {
-      await disableExtensionForTab(tabId);
-    }
-    
-    console.log(`Extension toggled to ${newEnabledState} for tab:`, tabId);
-  } catch (error) {
-    console.error('Error toggling extension:', error);
-    throw error;
-  }
-}
-
-// Enable extension for a specific tab
-async function enableExtensionForTab(tabId) {
-  try {
-    // Get the URL for the weights folder
-    const imagesResourceUrl = chrome.runtime.getURL("images/");
-    const weightsResourceUrl = chrome.runtime.getURL("weights/");
-    
-    console.log('enableExtensionForTab');
-    
-    // First, get sample images from storage to inject into user script
-    const result = await new Promise((resolve) => {
-      chrome.storage.local.get(['sampleImages'], resolve);
-    });
-    
-    const sampleImages = result.sampleImages || [];
-    
-    // Create a code string that will be injected to make sample images available in user script context
-    let sampleImagesCode = '';
-    if (sampleImages.length > 0) {
-      // Make sure each image has proper structure with label and imageUrl
-      const processedImages = sampleImages.map(img => ({
-        label: img.label || 'Unknown',
-        imageUrl: img.imageUrl || ''
-      })).filter(img => img.label && img.imageUrl);
-      
-      sampleImagesCode = `
-        window.sampleImages = ${JSON.stringify(processedImages)};
-      `;
-    } else {
-      // If no stored images, provide default images
-      sampleImagesCode = `
-        window.sampleImages = [
-          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1.jpg' },
-          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1a.jpg' },
-          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1b.jpg' },
-          { label: 'Sheldon', imageUrl: '${imagesResourceUrl}person2.jpg' }
-        ];
-      `;
-    }
-    
-    // Register content scripts for this specific tab only using userScripts API
-    await chrome.userScripts.register([
-      {
-        id: `phaseout-${tabId}-constants`,
-        matches: ["<all_urls>"],
-        js: [{ code: `const IMAGES_URL = "${imagesResourceUrl}"; const WEIGHTS_URL = "${weightsResourceUrl}";` }]
-      },
-      {
-        id: `phaseout-${tabId}-face-api`,
-        matches: ["<all_urls>"],
-        js: [{ file: 'face-api.min.js' }]
-      },
-      {
-        id: `phaseout-${tabId}-user-script`,
-        matches: ["<all_urls>"],
-        js: [
-          { file: 'user_script.js' },
-          { code: sampleImagesCode }
-        ]
-      }
-    ]);
-    
     console.log('Extension enabled for tab:', tabId);
   } catch (error) {
     console.error('Error enabling extension:', error);

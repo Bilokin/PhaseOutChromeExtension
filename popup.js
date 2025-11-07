@@ -15,9 +15,17 @@ document.addEventListener('DOMContentLoaded', async function() {
   
   // Check if the extension is currently enabled for this tab by checking storage
   try {
-    const result = await chrome.storage.local.get(['extensionEnabled', 'activeTabId']);
-    // Default to false (disabled) if not set
-    const isExtensionEnabled = (result.extensionEnabled !== undefined) ? result.extensionEnabled : false;
+    // First check if we have a valid tab ID
+    if (!tab || !tab.id) {
+      console.error('No valid tab ID found');
+      updateUI(false);
+      return;
+    }
+    
+    // Get current state for this specific tab
+    const result = await chrome.storage.local.get(['extensionEnabledForTabs']);
+    const enabledForTabs = result.extensionEnabledForTabs || {};
+    const isExtensionEnabled = enabledForTabs[tab.id] === true;
     
     // Update UI based on current status
     updateUI(isExtensionEnabled);
@@ -31,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       toggleSwitch.disabled = true;
       
       try {
-        // Send message to service worker to toggle extension
+        // Send message to service worker to toggle extension for this specific tab
         const response = await chrome.runtime.sendMessage({
           action: 'toggleExtension'
         });
@@ -96,9 +104,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       statusText.textContent = 'Refreshing tab and re-injecting scripts...';
       setTimeout(async () => {
         try {
-          const result = await chrome.storage.local.get(['extensionEnabled', 'activeTabId']);
-          // Default to false (disabled) if not set
-          const isExtensionEnabled = (result.extensionEnabled !== undefined) ? result.extensionEnabled : false;
+          const result = await chrome.storage.local.get(['extensionEnabledForTabs']);
+          const enabledForTabs = result.extensionEnabledForTabs || {};
+          const isExtensionEnabled = enabledForTabs[tab.id] === true;
           updateUI(isExtensionEnabled);
         } catch (error) {
           console.error('Error after refresh:', error);

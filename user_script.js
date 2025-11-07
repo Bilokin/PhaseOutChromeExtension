@@ -35,9 +35,6 @@ async function loadStoredSampleImages() {
         } else {
             // Fallback to default images if needed
             exampleImages = [
-                { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
-                { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
-                { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
                 { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
             ];
             console.log("Using fallback sample images");
@@ -46,9 +43,6 @@ async function loadStoredSampleImages() {
         console.error('Error loading stored sample images:', error);
         // Fallback to default images if needed
         exampleImages = [
-            { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
-            { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
-            { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
             { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
         ];
     }
@@ -354,9 +348,6 @@ async function init() {
         console.log("No sample images found, using default images");
         // Fallback to original hardcoded images if no stored images exist
         exampleImages = [
-            { label: 'Penny', imageUrl: IMAGES_URL + 'person1.jpg' },
-            { label: 'Penny', imageUrl: IMAGES_URL + 'person1a.jpg' },
-            { label: 'Penny', imageUrl: IMAGES_URL + 'person1b.jpg' },
             { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
         ];
         await loadExampleImages(exampleImages);

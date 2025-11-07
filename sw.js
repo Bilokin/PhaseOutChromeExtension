@@ -35,45 +35,27 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   }
 });
 
+// This listener is now only for the initial activation of the extension
 chrome.action.onClicked.addListener(async (tab) => {
-  // Get the URL for the weights folder
-
-  // Generate a URL for a web-accessible resource
-  const imagesResourceUrl = chrome.runtime.getURL("images/");
-  const weightsResourceUrl = chrome.runtime.getURL("weights/");
-
-
-
-  await chrome.userScripts.register([
-    {
-      id: 'constants',
-      matches: ['<all_urls>'],
-      js: [{ code: `const IMAGES_URL = "${imagesResourceUrl}";
-                    const WEIGHTS_URL = "${weightsResourceUrl}";` }]
-    },
-    {
-      id: 'face-api',
-      matches: ['<all_urls>'],
-      js: [{ file: 'face-api.min.js' }]
-    },
-    {
-      id: 'user-script',
-      matches: ['<all_urls>'],
-      js: [{ file: 'user_script.js' }]
-    }
-  ]);
-
+  // Send message to popup to toggle the extension state for this specific tab
+  await chrome.runtime.sendMessage({
+    action: 'toggleExtension',
+    tabId: tab.id // Pass the tab ID explicitly
+  });
 });
-
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'toggleExtension') {
-    // Get the tab ID from sender.tab.id (for popup messages)
+    // Get the tab ID from request.tabId or sender.tab.id 
     let tabId;
     
-    // First try to get tab ID from sender.tab.id (for popup messages)
-    if (sender.tab && sender.tab.id) {
+    // First try to get tab ID from request.tabId (sent from popup)
+    if (request.tabId) {
+      tabId = request.tabId;
+    } 
+    // Then try to get it from sender.tab.id (for popup messages)
+    else if (sender.tab && sender.tab.id) {
       tabId = sender.tab.id;
     } 
     // If that fails, try to get it from storage
@@ -228,21 +210,25 @@ async function enableExtensionForTab(tabId) {
       `;
     }
 
+    // Get the tab URL to use for specific matching
+    const tab = await chrome.tabs.get(tabId);
+    const tabUrl = tab.url;
+    
     // Register content scripts for this specific tab only using userScripts API
     await chrome.userScripts.register([
       {
         id: `phaseout-${tabId}-constants`,
-        matches: ["<all_urls>"],
+        matches: [tabUrl],
         js: [{ code: `const IMAGES_URL = "${imagesResourceUrl}"; const WEIGHTS_URL = "${weightsResourceUrl}";` }]
       },
       {
         id: `phaseout-${tabId}-face-api`,
-        matches: ["<all_urls>"],
+        matches: [tabUrl],
         js: [{ file: 'face-api.min.js' }]
       },
       {
         id: `phaseout-${tabId}-user-script`,
-        matches: ["<all_urls>"],
+        matches: [tabUrl],
         js: [
           { file: 'user_script.js' },
           { code: sampleImagesCode }
@@ -276,3 +262,23 @@ async function disableExtensionForTab(tabId) {
     }
   }
 }
+
+// Listen for messages from content scripts to check if they're running on the right tab
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'checkTabStatus') {
+    // This message is sent by the user script to verify it's running in the correct tab
+    const tabId = sender.tab.id;
+    
+    chrome.storage.local.get(['extensionEnabledForTabs'], (result) => {
+      const enabledForTabs = result.extensionEnabledForTabs || {};
+      const isEnabled = enabledForTabs[tabId] === true;
+      
+      sendResponse({ 
+        enabled: isEnabled,
+        tabId: tabId
+      });
+    });
+    
+    return true; // Keep message channel open for async response
+  }
+});

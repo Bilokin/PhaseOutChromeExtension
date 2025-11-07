@@ -41,7 +41,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       try {
         // Send message to service worker to toggle extension for this specific tab
         const response = await chrome.runtime.sendMessage({
-          action: 'toggleExtension'
+          action: 'toggleExtension',
+          tabId: tab.id  // Explicitly pass the tab ID
         });
         
         if (response && response.status === 'success') {
@@ -77,12 +78,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Store the active tab ID in storage
         await chrome.storage.local.set({ activeTabId: tab.id });
         
+        // Only send enable/disable messages if we're not already in the process of toggling
+        // The service worker will handle the correct state based on storage
         if (isExtensionEnabled) {
+          // Just make sure it's enabled for this tab
           await chrome.runtime.sendMessage({
             action: 'enableExtensionForTab',
             tabId: tab.id
           });
         } else {
+          // Just make sure it's disabled for this tab  
           await chrome.runtime.sendMessage({
             action: 'disableExtensionForTab',
             tabId: tab.id

@@ -326,6 +326,7 @@ function setupMutationObserver(cfg) {
 
 // Load models, examples, and start observing
 async function init() {
+
     weightsPath = WEIGHTS_URL || './weights';
     console.log("Using weights path:", weightsPath);
     await faceapi.nets.tinyFaceDetector.loadFromUri(weightsPath);

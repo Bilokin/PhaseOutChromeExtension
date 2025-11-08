@@ -67,21 +67,22 @@
       border-radius: 4px;
       font-size: 14px;
     }
-    
-    .delete-btn {
-      background-color: #ff4444;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 4px;
-      text-align: center;
-      display: inline-block;
-      cursor: pointer;
-      margin-left: 15px;
-      font-size: 16px;
+    .control-btn {
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 4px;
+        text-align: center;
+        display: inline-flex; /* Changed from inline-block to flex */
+        align-items: center; /* Vertically center the icon */
+        justify-content: center; /* Horizontally center the icon */
+        cursor: pointer;
+        margin-left: 15px;
+        font-size: 16px;
     }
     
-    .delete-btn:hover {
+    .control-btn:hover {
       background-color: #cc0000;
     }
     

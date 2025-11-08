@@ -103,10 +103,32 @@ function createImageItem(image, index) {
     saveImageName(index, this.value);
   });
   
+  // Create edit button (only for images with names)
+  const editBtn = document.createElement('button');
+  editBtn.className = 'control-btn';
+  editBtn.innerHTML = '<img src="icons/edit.svg" alt="Edit" width="16" height="16">';
+  editBtn.dataset.index = index;
+  editBtn.alt = 'Edit'
+  editBtn.style.backgroundColor = '#2196F3';
+  
+  // Only show edit button if image has a name
+  if (!image.name) {
+    editBtn.style.display = 'none';
+  }
+  
+  editBtn.addEventListener('click', function() {
+    // Enable editing mode
+    nameInput.disabled = false;
+    nameInput.focus();
+    editBtn.style.display = 'none';
+    confirmBtn.style.display = 'inline-block';
+  });
+  
   // Create confirmation button (only for images without names)
   const confirmBtn = document.createElement('button');
   confirmBtn.className = 'control-btn';
   confirmBtn.innerHTML = '<img src="icons/confirm.svg" alt="Confirm" width="16" height="16">';
+  confirmBtn.alt = 'Confirm'
   confirmBtn.dataset.index = index;
   confirmBtn.style.backgroundColor = '#4CAF50';
   
@@ -128,6 +150,7 @@ function createImageItem(image, index) {
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'control-btn';
   deleteBtn.innerHTML = '<img src="icons/delete.svg" alt="Confirm" width="16" height="16">';
+  deleteBtn.alt = 'Delete'
   deleteBtn.dataset.index = index;
   
   deleteBtn.addEventListener('click', function() {
@@ -141,6 +164,7 @@ function createImageItem(image, index) {
   
   // Assemble the image info section
   imageInfo.appendChild(nameInput);
+  imageInfo.appendChild(editBtn);
   imageInfo.appendChild(confirmBtn);
   imageInfo.appendChild(errorMsg);
   imageInfo.appendChild(deleteBtn);

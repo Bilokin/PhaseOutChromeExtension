@@ -71,13 +71,13 @@ function createImageItem(image, index) {
   imgPreview.className = 'image-preview';
   
   // Handle different image storage formats
-  if (image.previewUrl) {
-    // If we have a preview URL, use it directly
-    imgPreview.src = image.previewUrl;
-  } else if (image.data && image.data.length > 0) {
-    // If we have binary data, create a blob URL
+
+  // Always use binary data to create a new Blob URL
+  if (image.data && image.data.length > 0) {
     const blob = new Blob([new Uint8Array(image.data)], { type: 'image/jpeg' });
     imgPreview.src = URL.createObjectURL(blob);
+  } else if (image.imageUrl) {
+    imgPreview.src = image.imageUrl;
   } else {
     // Fallback to a placeholder or default image
     imgPreview.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"%3E%3Crect fill="%23eee" width="80" height="80"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3ENo Image%3C/text%3E%3C/svg%3E';
@@ -108,10 +108,10 @@ function createImageItem(image, index) {
   confirmBtn.className = 'delete-btn';
   confirmBtn.textContent = 'Confirm';
   confirmBtn.dataset.index = index;
-  confirmBtn.style.marginLeft = '10px';
+  confirmBtn.style.marginLeft = '15px';
   confirmBtn.style.backgroundColor = '#4CAF50';
   
-  // Only show confirmation button if name is not set yet
+  // Only show confirmation button if image doesn't have a name yet
   if (image.name) {
     confirmBtn.style.display = 'none';
   }
@@ -121,7 +121,7 @@ function createImageItem(image, index) {
     if (name && validatePersonName(name)) {
       finalizeImageUpload(index, name);
     } else {
-      alert('Please enter a valid person name (less than 15 characters, only letters, numbers, spaces and -()\' are allowed)');
+      alert('Please enter a valid person name (less than 15 characters, no special characters except "-()\'")');
     }
   });
   
@@ -140,6 +140,7 @@ function createImageItem(image, index) {
   errorMsg.className = 'name-validation-error';
   errorMsg.style.display = 'none';
   
+  // Assemble the image info section
   imageInfo.appendChild(nameInput);
   imageInfo.appendChild(confirmBtn);
   imageInfo.appendChild(errorMsg);
@@ -181,7 +182,7 @@ async function deleteSampleImage(index) {
   }
 }
 
-// Handle file upload with name validation
+// Handle file upload
 async function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -205,9 +206,9 @@ async function handleFileUpload(event) {
     // Read file as ArrayBuffer for storage
     const arrayBuffer = await file.arrayBuffer();
     
-    // Create image object with temporary name
+    // Create image object with data and preview URL
     const imageObject = {
-      name: '', // Will be set by user after upload
+      name: '', // Will be set later by user
       imageUrl: file.name,
       previewUrl: previewUrl,
       data: Array.from(new Uint8Array(arrayBuffer))
@@ -218,10 +219,10 @@ async function handleFileUpload(event) {
     const sampleImages = result.sampleImages || [];
     sampleImages.push(imageObject);
     
-    // Save to storage temporarily
+    // Save to storage
     await chrome.storage.local.set({ sampleImages: sampleImages });
     
-    // Reload the list to show the temporary item
+    // Reload the list to show the new image
     loadSampleImages();
     
     // Reset file input
@@ -232,18 +233,18 @@ async function handleFileUpload(event) {
   }
 }
 
-// Validate person name according to requirements
+// Validate person name
 function validatePersonName(name) {
-  // Name must be less than 15 symbols, no special characters except "-()'"
+  if (!name || name.length >= 15) return false;
   const regex = /^[a-zA-Z0-9\s\-()']+$/;
-  return name.length <= 15 && regex.test(name);
+  return regex.test(name);
 }
 
-// Function to finalize image upload with person name
+// Finalize image upload with person name
 async function finalizeImageUpload(index, name) {
   // Validate the name
   if (!validatePersonName(name)) {
-    alert('Person name must be less than 15 characters and can only contain letters, numbers, spaces, and these special characters: -()\'');
+    alert('Please enter a valid person name (less than 15 characters, no special characters except "-()\'")');
     return false;
   }
   

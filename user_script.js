@@ -323,6 +323,34 @@ function setupMutationObserver(cfg) {
     });
 }
 
+// Add a function to process images that might be loaded later due to lazy loading
+function setupLazyLoadHandler(cfg) {
+    // Handle images that are loaded after initial page load
+    window.addEventListener('load', () => {
+        // Process any images that were missed during initial load
+        setTimeout(() => {
+            detectFacesInAllImages(cfg);
+        }, 1000);
+    });
+    
+    // Also watch for IntersectionObserver events (common in lazy loading)
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Process image when it comes into view
+                    recognizeFacesInImage(entry.target, cfg);
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        // Observe all images on the page
+        document.querySelectorAll('img').forEach(img => {
+            observer.observe(img);
+        });
+    }
+}
+
 
 // Load models, examples, and start observing
 async function init() {
@@ -357,6 +385,7 @@ async function init() {
 
         await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
         setupMutationObserver(cfg);       // Start observing for new images
+        setupLazyLoadHandler(cfg);
     }
 }
 

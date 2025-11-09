@@ -190,10 +190,22 @@ async function enableExtensionForTab(tabId) {
     let sampleImagesCode = '';
     if (sampleImages.length > 0) {
       // Make sure each image has proper structure with label and imageUrl
-      const processedImages = sampleImages.map(img => ({
-        label: img.name || 'Unknown',
-        imageUrl: img.imageUrl || ''
-      })).filter(img => img.label && img.imageUrl);
+      const processedImages = sampleImages.map(img => {
+        // Handle both cases: images that have previewUrl or those that need to create it
+        let imageUrl = '';
+        
+        if (img.base64Data) {
+          // Convert base64 back to data URL
+          imageUrl = `data:image/jpeg;base64,${img.base64Data}`;
+        } else if (img.imageUrl) {
+          imageUrl = img.imageUrl;
+        }
+        
+        return {
+          label: img.name || 'Unknown',
+          imageUrl: imageUrl
+        };
+      }).filter(img => img.label && img.imageUrl);
 
       sampleImagesCode = `
         window.sampleImages = ${JSON.stringify(processedImages)};
@@ -202,9 +214,6 @@ async function enableExtensionForTab(tabId) {
       // If no stored images, provide default images
       sampleImagesCode = `
         window.sampleImages = [
-          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1.jpg' },
-          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1a.jpg' },
-          { label: 'Penny', imageUrl: '${imagesResourceUrl}person1b.jpg' },
           { label: 'Sheldon', imageUrl: '${imagesResourceUrl}person2.jpg' }
         ];
       `;

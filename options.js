@@ -234,7 +234,8 @@ async function handleFileUpload(event) {
       name: '', // Will be set later by user
       imageUrl: file.name,
       previewUrl: previewUrl,
-      data: Array.from(new Uint8Array(arrayBuffer))
+      data: Array.from(new Uint8Array(arrayBuffer)),
+      base64Data: btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
     };
     
     // Load existing images and add new one

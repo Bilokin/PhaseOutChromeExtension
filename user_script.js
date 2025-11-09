@@ -61,9 +61,9 @@ async function loadExampleImages(exampleImages) {
             
             // Handle relative URLs properly
             let fullImageUrl = imageUrl;
-            if (!imageUrl.startsWith('http') && !imageUrl.startsWith(IMAGES_URL)) {
-                fullImageUrl = IMAGES_URL + imageUrl;
-            }
+            //if (!imageUrl.startsWith('http') && !imageUrl.startsWith(IMAGES_URL)) {
+            //    fullImageUrl = IMAGES_URL + imageUrl;
+            //}
             
             const img = await faceapi.fetchImage(fullImageUrl);
             const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())

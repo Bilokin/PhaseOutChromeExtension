@@ -364,29 +364,14 @@ async function init() {
 
     // Load stored sample images
     await loadStoredSampleImages();
-    
-    // Check if we have any example images to load
-    if (exampleImages && exampleImages.length > 0) {
-        await loadExampleImages(exampleImages);
-        cfg = loadCfg()
-        initFaceMatcher();
 
-        await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
-        setupMutationObserver(cfg);       // Start observing for new images
-    } else {
-        console.log("No sample images found, using default images");
-        // Fallback to original hardcoded images if no stored images exist
-        exampleImages = [
-            { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
-        ];
-        await loadExampleImages(exampleImages);
-        cfg = loadCfg()
-        initFaceMatcher();
+    await loadExampleImages(exampleImages);
+    cfg = loadCfg()
+    initFaceMatcher();
 
-        await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
-        setupMutationObserver(cfg);       // Start observing for new images
-        setupLazyLoadHandler(cfg);
-    }
+    await detectFacesInAllImages(cfg); // Detect and recognize faces in existing images
+    setupMutationObserver(cfg);       // Start observing for new images
+    setupLazyLoadHandler(cfg);
 }
 
 // Start the process

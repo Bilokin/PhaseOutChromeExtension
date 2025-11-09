@@ -171,6 +171,46 @@ function loadCfg() {
 // Global variable for face matcher
 let faceMatcher;
 
+function loadImageViaProxy(imageUrl) {
+  return new Promise((resolve, reject) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    
+    const messageHandler = (event) => {
+      if (event.source !== window) return;
+      if (event.data.type === 'FETCH_IMAGE_RESPONSE' && 
+          event.data.requestId === requestId) {
+        
+        window.removeEventListener('message', messageHandler);
+        
+        if (event.data.error) {
+          reject(new Error(event.data.error));
+          return;
+        }
+        
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = event.data.dataUrl;
+      }
+    };
+    
+    window.addEventListener('message', messageHandler);
+    
+    // Send request to service worker via bridge.js
+    window.postMessage({
+      type: 'FETCH_IMAGE',
+      url: imageUrl,
+      requestId: requestId
+    }, '*');
+    
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      window.removeEventListener('message', messageHandler);
+      reject(new Error('Timeout waiting for image'));
+    }, 10000);
+  });
+}
+
 async function recognizeFacesInImage(img, cfg) {
     if (!img.complete) {
         await new Promise((resolve) => {
@@ -181,13 +221,14 @@ async function recognizeFacesInImage(img, cfg) {
             });
         });
     }
+    const decorsed_img = await loadImageViaProxy(img.src);
 
     // Skip small images
     if (img.width < cfg.minImageSize || img.height < cfg.minImageSize) {
         return [];
     }
     // Resize the image before processing
-    const resizedImg = await resizeImage(img, cfg.maxResizeWidth, cfg.maxResizeHeight);
+    const resizedImg = await resizeImage(decorsed_img, cfg.maxResizeWidth, cfg.maxResizeHeight);
 
     // Detect faces
     const detections = await faceapi.detectAllFaces(resizedImg, new faceapi.TinyFaceDetectorOptions())

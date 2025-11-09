@@ -46,6 +46,17 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'fetchImage') {
+    fetch(request.url)
+      .then(response => response.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onloadend = () => sendResponse({ dataUrl: reader.result });
+        reader.readAsDataURL(blob);
+      })
+      .catch(error => sendResponse({ error: error.message }));
+    return true; // Required for async sendResponse
+  }
   if (request.action === 'toggleExtension') {
     // Get the tab ID from request.tabId or sender.tab.id 
     let tabId;

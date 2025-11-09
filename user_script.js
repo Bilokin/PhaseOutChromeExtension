@@ -343,15 +343,17 @@ async function detectFacesInAllImages(cfg) {
         await recognizeFacesInImage(img, cfg);
     }
 }
-
 // Set up MutationObserver to watch for new images
 function setupMutationObserver(cfg) {
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
+                // Handle direct IMG nodes
                 if (node.nodeName === 'IMG') {
                     recognizeFacesInImage(node, cfg);
-                } else if (node.querySelectorAll) {
+                } 
+                // Handle containers that might contain images
+                else if (node.querySelectorAll) {
                     const newImgs = node.querySelectorAll('img');
                     newImgs.forEach((img) => recognizeFacesInImage(img, cfg));
                 }
@@ -389,10 +391,31 @@ function setupLazyLoadHandler(cfg) {
         document.querySelectorAll('img').forEach(img => {
             observer.observe(img);
         });
+        
+        // Also observe for new containers that might contain images
+        const containerObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if this node or its children contain images
+                        const imgs = node.querySelectorAll ? node.querySelectorAll('img') : [];
+                        imgs.forEach(img => {
+                            if (!img.dataset.processed) { // Prevent duplicate processing
+                                img.dataset.processed = 'true';
+                                recognizeFacesInImage(img, cfg);
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        
+        containerObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 }
-
-
 // Load models, examples, and start observing
 async function init() {
 

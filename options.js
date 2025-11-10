@@ -228,14 +228,15 @@ async function handleFileUpload(event) {
     
     // Read file as ArrayBuffer for storage
     const arrayBuffer = await file.arrayBuffer();
-    
+    const binaryString = new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '');
+
     // Create image object with data and preview URL
     const imageObject = {
       name: '', // Will be set later by user
       imageUrl: file.name,
       previewUrl: previewUrl,
       data: Array.from(new Uint8Array(arrayBuffer)),
-      base64Data: btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+      base64Data: btoa(binaryString)
     };
     
     // Load existing images and add new one

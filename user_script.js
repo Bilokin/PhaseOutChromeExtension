@@ -103,21 +103,23 @@ function initFaceMatcher() {
     console.log("Face matcher initialized with examples.");
 }
 
+// Modified resizeImage function to prevent size changes
 async function resizeImage(img, maxWidth = 640, maxHeight = 480) {
     // Create a temporary canvas to resize the image
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
     // Calculate new dimensions while maintaining aspect ratio
-    let newWidth = img.width;
-    let newHeight = img.height;
-    if (img.width > maxWidth) {
+    let newWidth = img.naturalWidth;
+    let newHeight = img.naturalHeight;
+    
+    if (img.naturalWidth > maxWidth) {
         newWidth = maxWidth;
-        newHeight = (img.height * maxWidth) / img.width;
+        newHeight = (img.naturalHeight * maxWidth) / img.naturalWidth;
     }
     if (newHeight > maxHeight) {
         newHeight = maxHeight;
-        newWidth = (img.width * maxHeight) / img.height;
+        newWidth = (img.naturalWidth * maxHeight) / img.naturalHeight;
     }
 
     // Set canvas dimensions
@@ -211,6 +213,7 @@ function loadImageViaProxy(imageUrl) {
   });
 }
 
+
 async function recognizeFacesInImage(img, cfg) {
     if (!img.complete) {
         await new Promise((resolve) => {
@@ -221,12 +224,14 @@ async function recognizeFacesInImage(img, cfg) {
             });
         });
     }
-    const decorsed_img = await loadImageViaProxy(img.src);
-
-    // Skip small images
+    
+    // Skip processing if image is too small
     if (img.width < cfg.minImageSize || img.height < cfg.minImageSize) {
         return [];
     }
+    
+    const decorsed_img = await loadImageViaProxy(img.src);
+
     // Resize the image before processing
     const resizedImg = await resizeImage(decorsed_img, cfg.maxResizeWidth, cfg.maxResizeHeight);
 
@@ -246,34 +251,27 @@ async function recognizeFacesInImage(img, cfg) {
         const results = detections.map(d => faceMatcher.findBestMatch(d.descriptor));
         const wrapper = wrapImageInContainer(img);
 
-        // Remove old canvases for this image
-        const oldCanvas = wrapper.querySelector('canvas');
-        if (oldCanvas) oldCanvas.remove();
+        // Remove old canvases for this image (only remove our specific canvases)
+        const oldCanvases = wrapper.querySelectorAll('canvas[data-face-recognition="true"]');
+        oldCanvases.forEach(canvas => canvas.remove());
 
         // Create a single canvas for this image
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // Set canvas dimensions to match the displayed image
-        canvas.width = img.width;
-        canvas.height = img.height;
+        // Set canvas dimensions to match the displayed image exactly
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
 
-        // Position the canvas over the image, accounting for margins/padding
+        // Position the canvas over the image with proper constraints
         canvas.style.position = 'absolute';
-        const imgRect = img.getBoundingClientRect();
-        const wrapperRect = wrapper.getBoundingClientRect();
-        canvas.style.left = (imgRect.left - wrapperRect.left) + 'px';
-        canvas.style.top = (imgRect.top - wrapperRect.top) + 'px';
+        canvas.style.left = '0';
+        canvas.style.top = '0';
+        canvas.style.pointerEvents = 'none'; // Don't interfere with image interactions
+        canvas.style.zIndex = '10000'; // High z-index to ensure it's on top of everything
+        canvas.setAttribute('data-face-recognition', 'true'); // Mark our canvas
 
-        // Apply canvas styles
-        Object.entries(cfg.canvasStyles).forEach(([key, value]) => {
-            canvas.style[key] = value;
-        });
-
-        // Set a data attribute to identify the canvas
-        canvas.setAttribute('data-img-src', img.src);
-
-        // Calculate scaling factors
+        // Calculate scaling factors based on actual image dimensions
         const scaleX = img.width / resizedImg.naturalWidth;
         const scaleY = img.height / resizedImg.naturalHeight;
 
@@ -328,6 +326,8 @@ function wrapImageInContainer(img) {
     wrapper.className = 'face-recognition-wrapper';
     wrapper.style.position = 'relative';
     wrapper.style.display = 'inline-block'; // Preserve image layout
+    wrapper.style.width = img.style.width || img.naturalWidth + 'px';
+    wrapper.style.height = img.style.height || img.naturalHeight + 'px';
 
     // Insert the wrapper before the image and move the image inside it
     img.parentNode.insertBefore(wrapper, img);
@@ -336,13 +336,22 @@ function wrapImageInContainer(img) {
     return wrapper;
 }
 
-// Function to detect and recognize faces in all existing images
+
+// Add image processing limits
+let processedImagesCount = 0;
+const MAX_IMAGES_TO_PROCESS = 20; // Limit concurrent processing
+
 async function detectFacesInAllImages(cfg) {
+    if (processedImagesCount >= MAX_IMAGES_TO_PROCESS) return;
+    
     const imgs = document.getElementsByTagName('img');
     for (let img of imgs) {
+        if (processedImagesCount >= MAX_IMAGES_TO_PROCESS) break;
         await recognizeFacesInImage(img, cfg);
+        processedImagesCount++;
     }
 }
+
 // Set up MutationObserver to watch for new images
 function setupMutationObserver(cfg) {
     const observer = new MutationObserver((mutations) => {

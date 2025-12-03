@@ -35,6 +35,28 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   }
 });
 
+// Listen for tab updates (navigation events) - consolidated handler
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Only process when navigation is complete and URL is available
+  console.log('OnUpdated tab:', tabId, 'status:', changeInfo.status);
+
+  if (changeInfo.status === 'complete' && tab.url) {
+    try {
+      // Check if extension was enabled for this tab before
+      const result = await chrome.storage.local.get(['extensionEnabledForTabs']);
+      const enabledForTabs = result.extensionEnabledForTabs || {};
+      
+      // If extension was enabled for this tab, re-enable it
+      if (enabledForTabs[tabId] === true) {
+        console.log('Re-enabling extension for tab after navigation:', tabId);
+        await enableExtensionForTab(tabId);
+      }
+    } catch (error) {
+      console.error('Error handling tab update:', error);
+    }
+  }
+});
+
 // This listener is now only for the initial activation of the extension
 chrome.action.onClicked.addListener(async (tab) => {
   // Send message to popup to toggle the extension state for this specific tab
@@ -44,7 +66,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   });
 });
 
-// Listen for messages from popup
+// Listen for messages from popup and other parts of the extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'fetchImage') {
     fetch(request.url)
@@ -57,6 +79,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ error: error.message }));
     return true; // Required for async sendResponse
   }
+  
   if (request.action === 'toggleExtension') {
     // Get the tab ID from request.tabId or sender.tab.id 
     let tabId;
@@ -188,7 +211,7 @@ async function enableExtensionForTab(tabId) {
     const imagesResourceUrl = chrome.runtime.getURL("images/");
     const weightsResourceUrl = chrome.runtime.getURL("weights/");
 
-    console.log('enableExtensionForTab');
+    console.log('enableExtensionForTab for tab:', tabId);
 
     // First, get sample images from storage to inject into user script
     const result = await new Promise((resolve) => {
@@ -233,6 +256,26 @@ async function enableExtensionForTab(tabId) {
     // Get the tab URL to use for specific matching
     const tab = await chrome.tabs.get(tabId);
     const tabUrl = tab.url;
+    
+    // Check if we have a valid URL before proceeding
+    if (!tabUrl) {
+      console.warn('No valid URL found for tab:', tabId);
+      return;
+    }
+    
+    // Unregister any existing scripts first to avoid conflicts
+    try {
+      await chrome.userScripts.unregister({ids:[
+        `phaseout-${tabId}-constants`,
+        `phaseout-${tabId}-face-api`, 
+        `phaseout-${tabId}-user-script`
+      ]});
+    } catch (error) {
+      // Ignore errors for non-existent scripts - this is expected
+      if (!error.message.includes('Nonexistent script ID')) {
+        console.error('Error unregistering existing scripts:', error);
+      }
+    }
     
     // Register content scripts for this specific tab only using userScripts API
     await chrome.userScripts.register([
@@ -300,5 +343,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     
     return true; // Keep message channel open for async response
+  }
+});
+
+// Also listen for tab activation to handle cases where tabs are switched
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  const { tabId } = activeInfo;
+  console.log('OnActivated tab:', tabId);
+  
+  try {
+    // Check if extension was enabled for this tab before
+    const result = await chrome.storage.local.get(['extensionEnabledForTabs']);
+    const enabledForTabs = result.extensionEnabledForTabs || {};
+    
+    // If extension was enabled for this tab, re-enable it
+    if (enabledForTabs[tabId] === true) {
+      console.log('Re-enabling extension on tab activation:', tabId);
+      await enableExtensionForTab(tabId);
+    }
+  } catch (error) {
+    console.error('Error handling tab activation:', error);
+  }
+});
+
+// Handle tab navigation more robustly by listening to various navigation events
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Handle navigation start - this can happen before the 'complete' status
+  if (changeInfo.status === 'loading' && tab.url) {
+    console.log('Navigation started for tab:', tabId, 'URL:', tab.url);
+    
+    try {
+      // Check if extension was enabled for this tab before
+      const result = await chrome.storage.local.get(['extensionEnabledForTabs']);
+      const enabledForTabs = result.extensionEnabledForTabs || {};
+      
+      // If extension was enabled for this tab, re-enable it
+      if (enabledForTabs[tabId] === true) {
+        console.log('Re-enabling extension for tab during navigation:', tabId);
+        await enableExtensionForTab(tabId);
+      }
+    } catch (error) {
+      console.error('Error handling tab update during navigation:', error);
+    }
   }
 });

@@ -103,6 +103,12 @@ function initFaceMatcher() {
     console.log("Face matcher initialized with examples.");
 }
 
+function getRenderedSize(el) {
+  const rect = el.getBoundingClientRect();
+  return { w: rect.width, h: rect.height };
+}
+
+
 // Modified resizeImage function to prevent size changes
 async function resizeImage(img, maxWidth = 640, maxHeight = 480) {
     // Create a temporary canvas to resize the image
@@ -258,10 +264,11 @@ async function recognizeFacesInImage(img, cfg) {
         // Create a single canvas for this image
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
+        const { w: dispW, h: dispH } = getRenderedSize(img);
 
         // Set canvas dimensions to match the displayed image exactly
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+        canvas.width = dispW;
+        canvas.height = dispH;
 
         // Position the canvas over the image with proper constraints
         canvas.style.position = 'absolute';
@@ -316,24 +323,24 @@ async function recognizeFacesInImage(img, cfg) {
 
 // Helper function to wrap the image in a container
 function wrapImageInContainer(img) {
-    // Skip if the image is already wrapped
-    if (img.parentElement.classList.contains('face-recognition-wrapper')) {
-        return img.parentElement;
-    }
+  // Skip if already wrapped
+  if (img.parentElement?.classList.contains('face-recognition-wrapper')) {
+    return img.parentElement;
+  }
 
-    // Create a wrapper div
-    const wrapper = document.createElement('div');
-    wrapper.className = 'face-recognition-wrapper';
-    wrapper.style.position = 'relative';
-    wrapper.style.display = 'inline-block'; // Preserve image layout
-    wrapper.style.width = img.style.width || img.naturalWidth + 'px';
-    wrapper.style.height = img.style.height || img.naturalHeight + 'px';
+  const { w, h } = getRenderedSize(img);
 
-    // Insert the wrapper before the image and move the image inside it
-    img.parentNode.insertBefore(wrapper, img);
-    wrapper.appendChild(img);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'face-recognition-wrapper';
+  wrapper.style.position = 'relative';
+  wrapper.style.display = 'inline-block'; // keep layout
+  wrapper.style.width = `${w}px`;
+  wrapper.style.height = `${h}px`;
 
-    return wrapper;
+  img.parentNode.insertBefore(wrapper, img);
+  wrapper.appendChild(img);
+
+  return wrapper;
 }
 
 

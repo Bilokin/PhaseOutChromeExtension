@@ -1,3 +1,16 @@
+
+// This will be replaced with dynamically loaded sample images
+let sampleImages = [];
+
+const labeledDescriptors = [];
+
+// Global variable for face matcher
+let faceMatcher;
+
+// Add image processing limits
+let processedImagesCount = 0;
+const MAX_IMAGES_TO_PROCESS = 20; // Limit concurrent processing
+
 // Function to detect faces in a single image
 async function detectFacesInImage(img) {
     if (!img.complete) {
@@ -16,9 +29,6 @@ async function detectFacesInImage(img) {
     console.log(`Detected ${detections.length} faces in image:`, img.src, detections);
 }
 
-// This will be replaced with dynamically loaded sample images
-let exampleImages = [];
-
 // Load stored sample images from extension storage via messaging
 async function loadStoredSampleImages() {
     try {
@@ -30,11 +40,11 @@ async function loadStoredSampleImages() {
         
         // If sampleImages are already loaded into global scope, use them
         if (typeof window.sampleImages !== 'undefined' && window.sampleImages.length > 0) {
-            exampleImages = window.sampleImages;
-            console.log("Loaded sample images from global scope:", exampleImages);
+            sampleImages = window.sampleImages;
+            console.log("Loaded sample images from global scope:", sampleImages);
         } else {
             // Fallback to default images if needed
-            exampleImages = [
+            sampleImages = [
                 { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
             ];
             console.log("Using fallback sample images");
@@ -42,16 +52,14 @@ async function loadStoredSampleImages() {
     } catch (error) {
         console.error('Error loading stored sample images:', error);
         // Fallback to default images if needed
-        exampleImages = [
+        sampleImages = [
             { label: 'Sheldon', imageUrl: IMAGES_URL + 'person2.jpg' },
         ];
     }
 }
 
-const labeledDescriptors = [];
-
-async function loadExampleImages(exampleImages) {
-    for (const { label, imageUrl } of exampleImages) {
+async function processSampleImages(sampleImages) {
+    for (const { label, imageUrl } of sampleImages) {
         try {
             // Validate that we have a valid label
             if (!label || typeof label !== 'string') {
@@ -90,7 +98,6 @@ async function loadExampleImages(exampleImages) {
     }
 }
 
-
 // Initialize the face matcher after loading example images
 function initFaceMatcher() {
     // Check that we have at least one labeled descriptor before initializing
@@ -107,7 +114,6 @@ function getRenderedSize(el) {
   const rect = el.getBoundingClientRect();
   return { w: rect.width, h: rect.height };
 }
-
 
 // Modified resizeImage function to prevent size changes
 async function resizeImage(img, maxWidth = 640, maxHeight = 480) {
@@ -176,8 +182,6 @@ function loadCfg() {
     };
 }
 
-// Global variable for face matcher
-let faceMatcher;
 
 function loadImageViaProxy(imageUrl) {
   return new Promise((resolve, reject) => {
@@ -218,7 +222,6 @@ function loadImageViaProxy(imageUrl) {
     }, 10000);
   });
 }
-
 
 async function recognizeFacesInImage(img, cfg) {
     if (!img.complete) {
@@ -320,7 +323,6 @@ async function recognizeFacesInImage(img, cfg) {
     }
 }
 
-
 // Helper function to wrap the image in a container
 function wrapImageInContainer(img) {
   // Skip if already wrapped
@@ -343,10 +345,6 @@ function wrapImageInContainer(img) {
   return wrapper;
 }
 
-
-// Add image processing limits
-let processedImagesCount = 0;
-const MAX_IMAGES_TO_PROCESS = 20; // Limit concurrent processing
 
 async function detectFacesInAllImages(cfg) {
     if (processedImagesCount >= MAX_IMAGES_TO_PROCESS) return;
@@ -445,7 +443,7 @@ async function init() {
     // Load stored sample images
     await loadStoredSampleImages();
 
-    await loadExampleImages(exampleImages);
+    await processSampleImages(sampleImages);
     cfg = loadCfg()
     initFaceMatcher();
 
@@ -456,3 +454,4 @@ async function init() {
 
 // Start the process
 init().catch(console.error);
+

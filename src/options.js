@@ -106,7 +106,7 @@ function createImageItem(image, index) {
   // Create edit button (only for images with names)
   const editBtn = document.createElement('button');
   editBtn.className = 'control-btn';
-  editBtn.innerHTML = '<img src="icons/edit.svg" alt="Edit" width="16" height="16">';
+  editBtn.innerHTML = '<img src="../icons/edit.svg" alt="Edit" width="16" height="16">';
   editBtn.dataset.index = index;
   editBtn.alt = 'Edit'
   editBtn.style.backgroundColor = '#2196F3';
@@ -127,7 +127,7 @@ function createImageItem(image, index) {
   // Create confirmation button (only for images without names)
   const confirmBtn = document.createElement('button');
   confirmBtn.className = 'control-btn';
-  confirmBtn.innerHTML = '<img src="icons/confirm.svg" alt="Confirm" width="16" height="16">';
+  confirmBtn.innerHTML = '<img src="../icons/confirm.svg" alt="Confirm" width="16" height="16">';
   confirmBtn.alt = 'Confirm'
   confirmBtn.dataset.index = index;
   confirmBtn.style.backgroundColor = '#4CAF50';
@@ -149,7 +149,7 @@ function createImageItem(image, index) {
   // Create delete button
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'control-btn';
-  deleteBtn.innerHTML = '<img src="icons/delete.svg" alt="Confirm" width="16" height="16">';
+  deleteBtn.innerHTML = '<img src="../icons/delete.svg" alt="Confirm" width="16" height="16">';
   deleteBtn.alt = 'Delete'
   deleteBtn.dataset.index = index;
   

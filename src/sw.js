@@ -287,13 +287,13 @@ async function enableExtensionForTab(tabId) {
       {
         id: `phaseout-${tabId}-face-api`,
         matches: [tabUrl],
-        js: [{ file: 'face-api.min.js' }]
+        js: [{ file: 'src/face-api.min.js' }]
       },
       {
         id: `phaseout-${tabId}-user-script`,
         matches: [tabUrl],
         js: [
-          { file: 'user_script.js' },
+          { file: 'src/user_script.js' },
           { code: sampleImagesCode }
         ]
       }

@@ -170,9 +170,9 @@ function loadCfg() {
             pointerEvents: 'none',
         },
         boxStyles: {
-            strokeStyle: 'red',
+            strokeStyle: 'black',
             lineWidth: 2,
-            fillStyle: 'rgba(255, 0, 0, 0.8)',
+            fillStyle: 'rgba(0, 0, 0, 1.0)',
         },
         labelStyles: {
             fillStyle: 'white',
@@ -306,12 +306,12 @@ async function recognizeFacesInImage(img, cfg) {
                 // Add the label
                 ctx.fillStyle = cfg.labelStyles.fillStyle;
                 ctx.font = cfg.labelStyles.font;
-                ctx.fillText(
-                    result.label.slice(0, cfg.labelStyles.maxLength),
-                    scaledBox.x + 5,
-                    scaledBox.y + scaledBox.height / 2,
-                    scaledBox.width - 10
-                );
+                //ctx.fillText(
+                //    result.label.slice(0, cfg.labelStyles.maxLength),
+                //    scaledBox.x + 5,
+                //    scaledBox.y + scaledBox.height / 2,
+                //    scaledBox.width - 10
+                //);
             }
         });
 
